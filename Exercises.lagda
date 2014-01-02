@@ -123,19 +123,19 @@ data _∨_ (A B : Set) : Set where
   inr : B → A ∨ B
   
 M1RProof : {A B : Set} → ¬ (A ∧ B) → (¬ A) ∨ (¬ B)
-M1RProof negAnd = {!!}
+M1RProof negAnd = {!inl (λ a → ...?) lub inr (λ b → ...?)!}
 M1LProof : {A B : Set} → (¬ A) ∨ (¬ B) → ¬ (A ∧ B)
 M1LProof (inl x) (both x₁ x₂) = x x₁
 M1LProof (inr x) (both x₁ x₂) = x x₂
 M2RProof : {A B : Set} → ¬ (A ∨ B) → (¬ A) ∧ (¬ B)
-M2RProof negOr = {!!}
+M2RProof negOr = both (λ a → negOr (inl a)) (λ b → negOr (inr b))
 M2LProof : {A B : Set} → (¬ A) ∧ (¬ B) → ¬ (A ∨ B)
 M2LProof (both x x₁) (inl x₂) = x x₂
 M2LProof (both x x₁) (inr x₂) = x₁ x₂
 
 \end{code}
 
-Widać, że w dowodach M1R i M2R kolejny krokiem byłoby rozważenie obu konstruktorów inl i inr w zależności od potrzeby; jednak w Agdzie musimy z góry podać który z konstruktorów wybieramy, co nie pozwala dowieść praw de morgana w jedną stronę.
+Widać, że w dowodzie M1R kolejny krokiem byłoby rozważenie obu konstruktorów inl i inr w zależności od potrzeby (prosta implikacja skończyłaby dowód); jednak w Agdzie musimy z góry podać który z konstruktorów wybieramy, co nie pozwala dowieść prawa de morgana w jedną stronę.
 
 \end{zadanie}
 
@@ -176,15 +176,17 @@ Pamiętając, że wg Izomorfizmu Curry'ego-Howarda indukcja to rekursja,
 udowodnij następujące własności dodawania:
 
 \begin{code}
-subst : {A : Set}{x y : A}(P : A → Set) → x ≡ y → P x → P y
-subst P refl v = v
+cong : {A B : Set}{x y : A}(f : A → B) → x ≡ y → f x ≡ f y
+cong f refl = refl
  
 plus-right-zero : (n : ℕ) → n + 0 ≡ n
 plus-right-zero zero = refl
-plus-right-zero (suc x) = {! subst refl (plus-right-zero x) !}
+plus-right-zero (suc x) =  cong suc (plus-right-zero x) 
 
 plus-suc-n-m : (n m : ℕ) → suc (n + m) ≡ n + suc m
-plus-suc-n-m = {!!}
+plus-suc-n-m zero m = refl
+plus-suc-n-m (suc n) m = cong suc (plus-suc-n-m n m)
+
 \end{code}
 
 \end{zadanie}
@@ -193,8 +195,16 @@ plus-suc-n-m = {!!}
 Korzystając z poprzedniego zadania, udowodnij przemienność dodawania:
 
 \begin{code}
+
+eq-commutative : {A : Set}(x y : A) → x ≡ y → y ≡ x
+eq-commutative .y y refl = refl
+
+subst : {A : Set}{x y : A}(P : A → Set) → x ≡ y → P x → P y
+subst P refl v = v
+
 plus-commutative : (n m : ℕ) → n + m ≡ m + n
-plus-commutative = {!!}
+plus-commutative zero m = eq-commutative (m + zero) (m) (plus-right-zero m)
+plus-commutative (suc n) m = subst (λ x → suc (n + m) ≡ x ) (plus-suc-n-m m n) (cong suc (plus-commutative n m))
 \end{code}
 
 \end{zadanie}
@@ -228,6 +238,14 @@ _++_ : {A : Set} → {n m : ℕ} → Vec A n → Vec A m → Vec A (n + m)
 Zaprogramuj funkcję vmap, która jest wektorowym odpowiednikiem map dla list.
 Jaka powinna być długość wynikowego wektora?
 
+\begin{code}
+
+vmap : {A B : Set} → {n : ℕ} → (f : A → B) → Vec A n → Vec B n
+vmap f [] = []
+vmap f (x ∷ a) = f x ∷ vmap f a
+
+\end{code}
+
 \end{zadanie}
 
 \begin{zadanie}
@@ -244,12 +262,33 @@ aby nie dopuścić (statycznie, za pomocą systemu typów) do niebezpiecznych wy
 
 \end{zadanie}
 
+\begin{code}
+data _╳_ (A B : Set) : Set where
+ _,_ : A → B → A ╳ B 
+
+vzip : {A B : Set} → {n : ℕ} → Vec A n → Vec B n → Vec (A ╳ B) n
+vzip [] [] = []
+vzip (x ∷ a) (x₁ ∷ b) = (x , x₁) ∷ vzip a b
+
+\end{code}
+
 \begin{zadanie}
 
 Zaprogramuj \textbf{wydajną} funkcję odwracającą wektor. Użyj funkcji
 subst z wykładu, jeśli będziesz chciał zmusić Agdę do stosowania praw
 arytmetyki.
 
+\begin{code}
+
+private
+  rev : {A : Set} → {n m : ℕ} → Vec A n → Vec A m → Vec A (n + m)
+  rev [] b = b
+  rev {A} {suc n} {m} (x ∷ a) b = subst (Vec A) (eq-commutative (suc (n + m)) (n + suc m) (plus-suc-n-m n m)) (rev a (x ∷ b))
+  
+reverse : {A : Set} → {n : ℕ} → Vec A n → Vec A n
+reverse {A} {n} a = subst (Vec A) (plus-right-zero n) (rev a [])
+
+\end{code}
 \end{zadanie}
 
 \begin{zadanie}
@@ -268,11 +307,40 @@ Zaimplementuj wszystkie trzy warianty. W trzecim wariancie użyj następujących
 data Bool : Set where
   true false : Bool
 
+data List (A : Set) : Set where
+  ⦃⦄ : List A
+  _∈_ : A → List A → List A
+  
+filter₁ : {A : Set} → {n : ℕ} → (A → Bool) → Vec A n → List A
+filter₁ f [] = ⦃⦄
+filter₁ f (x ∷ a) with f x 
+filter₁ f (x ∷ a) | true = x ∈ filter₁ f a
+filter₁ f (x ∷ a) | false = filter₁ f a
+
+record Σ (A : Set) (P : A → Set) : Set where
+  constructor _,_
+  field proj₁ : A
+  field proj₂ : P proj₁
+
+filter₂ : {A : Set} → {n : ℕ} → (A → Bool) → Vec A n → Σ ℕ (Vec A)
+filter₂ f [] = 0 , []
+filter₂ f (x ∷ a) with f x 
+filter₂ f (x ∷ a) | false = filter₂ f a
+filter₂ f (x ∷ a) | true with filter₂ f a 
+filter₂ f (x ∷ a) | true | proj₁ , proj₂ = (suc proj₁) , (x ∷ proj₂)
+   
 filter-length : {A : Set}{n : ℕ} → (A → Bool) → Vec A n → ℕ
-filter-length = {!!}
+filter-length f [] = 0
+filter-length f (x ∷ a) with f x 
+filter-length f (x ∷ a) | false = filter-length f a
+filter-length f (x ∷ a) | true = suc (filter-length f a)
 
 filter₃ : {A : Set}{n : ℕ} → (P : A → Bool) → (xs : Vec A n) → Vec A (filter-length P xs)
-filter₃ = {!!}
+filter₃ f [] = []
+filter₃ f (x ∷ xs) with f x 
+filter₃ f (x ∷ xs) | false = filter₃ f xs
+filter₃ f (x ∷ xs) | true = x ∷ filter₃ f xs
+
 \end{code}
 
 \end{zadanie}
