@@ -143,59 +143,11 @@ mutual
   infer-type T (snd e) | Just (hasType (S ⊗ S₁) x) = Just (hasType S₁ (T-snd x))
 
   check-type : ∀ T e S → Maybe (T ⊢ e ∷ S)
-  check-type T (N x) nat = Just (T-Nat {T} {x})
-  check-type T (N x) (S ⇒ S₁) = Nothing
-  check-type T (N x) (S ⊗ S₁) = Nothing
-  check-type T (if0 e e₁ e₂) S with check-type T e nat && check-type T e₁ S && check-type T e₂ S
-  check-type T (if0 e e₁ e₂) S | Nothing = Nothing
-  check-type T (if0 e e₁ e₂) S | Just (pair (pair guard-prf then-prf) else-prf) = Just (T-if0 guard-prf then-prf else-prf)
-  check-type T V S with T ≟ S 
-  check-type T V S | Nothing = Nothing
-  check-type .S V S | Just refl = Just T-Var
-  check-type T (lam x e) nat = Nothing
-  check-type T (lam x e) (S ⊗ S₁) = Nothing
-  check-type T (lam x e) (S ⇒ S₁) with x ≟ S && check-type x e S₁
-  check-type T (lam x e) (S ⇒ S₁) | Nothing = Nothing
-  check-type T (lam .S e) (S ⇒ S₁) | Just (pair refl x₂) = Just (T-lam x₂)
-  check-type T (e • e₁) nat = Nothing
-  check-type T (e • e₁) (S ⊗ S₁) = Nothing
-  check-type T (e • e₁) (S ⇒ S₁) with infer-type T e
-  check-type T (e • e₁) (S ⇒ S₁) | Nothing = Nothing
-  check-type T (e • e₁) (S₁ ⇒ S₂) | Just (hasType nat x) = Nothing
-  check-type T (e • e₁) (S₂ ⇒ S₃) | Just (hasType (S ⊗ S₁) x) = Nothing 
-  check-type T (e • e₁) (S₂ ⇒ S₃) | Just (hasType (S ⇒ S₁) x) with S₃ ≟ S₁
-  check-type T (e • e₁) (S₂ ⇒ S₃) | Just (hasType (S ⇒ S₁) x) | Nothing = Nothing
-  check-type T (e • e₁) (S₂ ⇒ .S₁) | Just (hasType (S ⇒ S₁) x) | Just refl with check-type T e₁ (S₂ ⇒ S)
-  check-type T (e • e₁) (S₂ ⇒ .S₁) | Just (hasType (S ⇒ S₁) x) | Just refl | Nothing = Nothing
-  check-type T (e • e₁) (S₂ ⇒ .S₁) | Just (hasType (S ⇒ S₁) x) | Just refl | Just a = Just (T-tim x a)
-  check-type T (f $ a) S with infer-type T f
-  check-type T (f $ a) S | Nothing = Nothing
-  check-type T (f $ a₁) S₁ | Just (hasType nat x) = Nothing
-  check-type T (f $ a₁) S₂ | Just (hasType (S ⊗ S₁) x) = Nothing 
-  check-type T (f $ a₁) S₂ | Just (hasType (S ⇒ S₁) x) with check-type T a₁ S
-  check-type T (f $ a₁) S₂ | Just (hasType (S ⇒ S₁) x) | Nothing = Nothing
-  check-type T (f $ a₁) S₂ | Just (hasType (S ⇒ S₁) x) | Just a with S₂ ≟ S₁ 
-  check-type T (f $ a₁) S₂ | Just (hasType (S ⇒ S₁) x) | Just a | Nothing = Nothing
-  check-type T (f $ a₁) .S₁ | Just (hasType (S ⇒ S₁) x) | Just a₂ | Just refl =  Just (T-apl x a₂) 
-  check-type T [ e , e₁ ] nat = Nothing
-  check-type T [ e , e₁ ] (S ⇒ S₁) = Nothing
-  check-type T [ e , e₁ ] (S ⊗ S₁) with check-type T e S && check-type T e₁ S₁
-  check-type T [ e , e₁ ] (S ⊗ S₁) | Nothing = Nothing
-  check-type T [ e , e₁ ] (S ⊗ S₁) | Just (pair x x₁) = Just (T-Par x x₁)
-  check-type T (fst e) S with infer-type T e 
-  check-type T (fst e) S | Nothing = Nothing
-  check-type T (fst e) S₁ | Just (hasType nat x) = Nothing
-  check-type T (fst e) S₂ | Just (hasType (S ⇒ S₁) x) = Nothing
-  check-type T (fst e) S₂ | Just (hasType (S ⊗ S₁) x) with S ≟ S₂
-  check-type T (fst e) S₂ | Just (hasType (S ⊗ S₁) x) | Nothing = Nothing
-  check-type T (fst e) S₂ | Just (hasType (.S₂ ⊗ S₁) x) | Just refl = Just (T-fst x)
-  check-type T (snd e) S with infer-type T e 
-  check-type T (snd e) S | Nothing = Nothing
-  check-type T (snd e) S₁ | Just (hasType nat x) = Nothing
-  check-type T (snd e) S₂ | Just (hasType (S ⇒ S₁) x) = Nothing
-  check-type T (snd e) S₂ | Just (hasType (S ⊗ S₁) x) with S₁ ≟ S₂
-  check-type T (snd e) S₂ | Just (hasType (S ⊗ S₁) x) | Nothing = Nothing
-  check-type T (snd e) S₂ | Just (hasType (S ⊗ .S₂) x) | Just refl = Just (T-snd x)
+  check-type T e S with infer-type T e
+  check-type T e S | Nothing = Nothing
+  check-type T e S₁ | Just (hasType S x) with S₁ ≟ S
+  check-type T e S₁ | Just (hasType S x) | Nothing = Nothing
+  check-type T e .S | Just (hasType S x) | Just refl = Just x
 
 interp : (e : Expr) → Maybe ℕ
 interp e with infer-type nat e
